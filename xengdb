@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# The MIT License (MIT)
+# 
+# Copyright (c) 2015 Assured Information Security, Inc.
+# Author: Kyle J. Temkin <temkink@ainfosec.com>
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+
+DOM_ID=$1
+shift 1
+
+#If we don't have an argument, print our usage.
+if [ x"$DOM_ID" = x ]; then
+    echo
+    echo "Usage: $0 <domid> [arguments-to-gdb]"
+    echo
+    exit
+fi
+
+#If the user specified dom0, fail.
+#(Or this will produce a meaningless empty screen.)
+if [ "$DOM_ID" -eq 0 ]; then
+    echo
+    echo "Cannot attach to dom0. You'll need to use another method, like SSH."
+    echo
+    exit 1
+fi
+
+#Attempt to get the domain's pts.
+DOM_TTY=$(xenstore-read /local/domain/$DOM_ID/console/tty 2>/dev/null)
+if [ x"$DOM_TTY" = x ] || ! [ -e $DOM_TTY ]; then
+    echo
+    echo "Could not connect to domain $DOM_ID. Verify that the domain exists."
+    echo
+    exit 1
+fi
+
+#Otherwise, if all went well, connect!
+gdb --eval-command="target remote $DOM_TTY" $@
+
